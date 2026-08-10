@@ -1,0 +1,38 @@
+name: Build GridsMeshLink Real APK
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unzip project
+        run: |
+          unzip -o FINAL-*.zip || unzip -o *.zip || true
+          ls -la
+          # if zip contains folder, move contents up
+          if [ -d "GRIDSMESHLINK_APK" ]; then mv GRIDSMESHLINK_APK/*.; fi
+          if [ -d "app" ]; then echo "app found"; fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Fix gradle and manifest for huma://
+        run: |
+          # Fix gradle wrapper to 8.5 to avoid 6.1.1 error
+          mkdir -p gradle/wrapper
+          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip" > gradle/wrapper/gradle-wrapper.properties
+          chmod +x gradlew
+          # Ensure custom scheme in manifest (if not edited)
+          grep -q "huma" app/src/main/AndroidManifest.xml || echo "Please edit manifest with huma scheme"
+
+      - name: Build APK
+        run:./gradlew assembleDebug
+
+      - name: Upload Real APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GridsMeshLink-REAL-APK-with-huma
+          path: app/build/outputs/apk/debug/*.apk
